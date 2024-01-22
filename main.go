@@ -3,25 +3,26 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"html/template"
+	"net/http"
 	"os"
 	"time"
+
+	_ "modernc.org/sqlite"
 )
+
+const dbfile string = "mytime.db"
+
+var db *sql.DB
 
 func getRoot(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("got / request\n")
 	// need to inject the form based on the required fields from the database
 	tmpl := template.Must(template.ParseFiles("timesheet.html"))
 	tmpl.Execute(w, nil)
-}
-
-func getHello(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("got /hello request\n")
-	io.WriteString(w, "Hello, HTTP!\n")
 }
 
 func saveEventDatatoDB(w http.ResponseWriter, r *http.Request) {
@@ -56,11 +57,29 @@ func getEventDatafromDB(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getCategoriesfromDB(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("got /getCategoriesfromDB request\n")
+	if r.Method == "GET" {
+		jstring, err := getCategoriesJSON(db)
+		if err != nil {
+			fmt.Println("Returned JSON string: ", jstring)
+		}
+		w.Write([]byte(jstring))
+	}
+}
+
 func main() {
+
+	db = Opendatabase(dbfile)
+	defer db.Close()
+
 	http.HandleFunc("/", getRoot)
 	http.HandleFunc("/saveEventDatatoDB", saveEventDatatoDB)
 	http.HandleFunc("/getEventDatafromDB", getEventDatafromDB)
+	http.HandleFunc("/getCategoriesfromDB", getCategoriesfromDB)
 
+	fmt.Println("Server starting on localhost:3333")
+	//openURL("http://localhost:3333")
 	err := http.ListenAndServe(":3333", nil)
 	if errors.Is(err, http.ErrServerClosed) {
 		fmt.Printf("server closed\n")
