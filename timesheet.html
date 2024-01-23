@@ -5,6 +5,70 @@
     <link href='https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css' rel='stylesheet'>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js'></script>
     <script>
+        // global variable to hold the categories
+        var categoriesArray = [];
+
+        function buildPrimaryCategories(selectedCategoryID) {
+            // from the Json, build the UI
+            // note that the categoriesArray is a global variable
+            var pc = document.getElementById("primaryLogTypeRadio")
+            pc.replaceChildren();
+            for (let i = 0; i < categoriesArray.length; i++) {
+                var newDiv = document.createElement("div");
+                newDiv.setAttribute('class','form-check form-check-inline')
+                radioInput = document.createElement('input');
+                radioInput.setAttribute('class', 'form-check-input')
+                radioInput.setAttribute('type', 'radio');
+                radioInput.setAttribute('name','primaryLogType');
+                radioInput.setAttribute('value', categoriesArray[i].ID.toString())
+                radioInput.setAttribute('id', 'primaryLogTypeRadio'+categoriesArray[i].ID.toString())
+                if (categoriesArray[i].ID == selectedCategoryID) {
+                    radioInput.checked = true;
+                }
+                // not sure this is the best way to do this...
+                radioInput.setAttribute('onchange', 'buildSecondaryCategories('+categoriesArray[i].ID.toString()+', 0)')
+                newDiv.appendChild(radioInput)
+                radioLabel = document.createElement("label")
+                radioLabel.setAttribute('class', 'form-check-label')
+                radioLabel.setAttribute('for','primaryLogTypeRadio'+categoriesArray[i].ID.toString())
+                radioLabel.innerHTML = categoriesArray[i].Name
+                newDiv.appendChild(radioLabel)
+                pc.appendChild(newDiv)
+            }
+        }
+
+        function buildSecondaryCategories(selectedPrimaryID, selectedSecondaryID) {
+            // from the Json, build the UI
+            // note that the categoriesArray is a global variable
+            var pc = document.getElementById("secondaryLogTypeRadio")
+            pc.replaceChildren();
+            for (let i = 0; i < categoriesArray.length; i++) {
+                if (categoriesArray[i].ID == selectedPrimaryID) {
+                    for (let j = 0; j < categoriesArray[i].Secondary.length; j++) {
+                        var newDiv = document.createElement("div");
+                        newDiv.setAttribute('class','form-check form-check-inline')
+                        radioInput = document.createElement('input');
+                        radioInput.setAttribute('class', 'form-check-input')
+                        radioInput.setAttribute('type', 'radio');
+                        radioInput.setAttribute('name','secondaryLogType');
+                        radioInput.setAttribute('value', categoriesArray[i].Secondary[j].ID.toString())
+                        radioInput.setAttribute('id', 'secondaryLogTypeRadio'+categoriesArray[i].Secondary[j].ID.toString())
+                        if (categoriesArray[i].Secondary[j].ID == selectedSecondaryID) {
+                            radioInput.checked = true;
+                        }
+                        newDiv.appendChild(radioInput)
+                        radioLabel = document.createElement("label")
+                        radioLabel.setAttribute('class', 'form-check-label')
+                        radioLabel.setAttribute('for','secondaryLogTypeRadio'+categoriesArray[i].Secondary[j].ID.toString())
+                        radioLabel.innerHTML = categoriesArray[i].Secondary[j].Name
+                        newDiv.appendChild(radioLabel)
+                        pc.appendChild(newDiv)
+                    }
+                    break
+                }
+            }
+        }
+
         //Handle the save button being pressed
         function saveEventData() {
             const form = document.getElementById("eventForm")
@@ -52,17 +116,14 @@
             // get category data
             //https://www.freecodecamp.org/news/how-to-fetch-data-from-an-api-using-the-fetch-api-in-javascript/
             const response = await fetch('/getCategoriesfromDB')
-            const categories = await response.json()
+            categoriesArray = await response.json()
 
-            var pc = document.getElementById("primaryLogType")
-            for (let i = 0; i < categories.length; i++) {
-                const newDiv = document.createElement("div");
-                radioInput = document.createElement('input');
-                radioInput.setAttribute('type', 'radio');
-                radioInput.setAttribute('primaryLogType', name);
-                newDiv.appendChild(radioInput)
-                pc.appendChild(newDiv)
-            }
+            // need a function to build the primaryLogType radio array
+            // needs to set a callback onclick to build the secondary array
+            // need to be able to call with an id to select primary and secondary
+            // radio selections
+            buildPrimaryCategories(1)
+            //buildSecondaryCategories(categories, 1, 0)
             // set the modal data
             setModelData(arg)
             myModal.show();
@@ -223,34 +284,38 @@
                                 <option value="Chicago">
                             </datalist>
                         </div>
-                        <div class="mb-3" id="primaryLogType">
+                        <div class="mb-3">
                             <label class="form-label d-block">Primary Log Type</label>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" id="optionA" type="radio" name="primaryLogType" value="optionA" />
-                                <label class="form-check-label" for="optionA">option A</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" id="optionB" type="radio" name="primaryLogType" value="optionB" />
-                                <label class="form-check-label" for="optionB">option B</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" id="optionC" type="radio" name="primaryLogType" value="optionC" />
-                                <label class="form-check-label" for="optionC">option C</label>
+                            <div id="primaryLogTypeRadio">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" id="optionA" type="radio" name="primaryLogType" value="optionA" />
+                                    <label class="form-check-label" for="optionA">option A</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" id="optionB" type="radio" name="primaryLogType" value="optionB" />
+                                    <label class="form-check-label" for="optionB">option B</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" id="optionC" type="radio" name="primaryLogType" value="optionC" />
+                                    <label class="form-check-label" for="optionC">option C</label>
+                                </div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label d-block">Secondary Log Type</label>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" id="optionA" type="radio" name="secondaryLogType" data-sb-validations="" />
-                                <label class="form-check-label" for="optionA">option A</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" id="optionB" type="radio" name="secondaryLogType" data-sb-validations="" />
-                                <label class="form-check-label" for="optionB">option B</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" id="optionC" type="radio" name="secondaryLogType" data-sb-validations="" />
-                                <label class="form-check-label" for="optionC">option C</label>
+                            <div id="secondaryLogTypeRadio">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" id="optionA" type="radio" name="secondaryLogType" data-sb-validations="" />
+                                    <label class="form-check-label" for="optionA">option A</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" id="optionB" type="radio" name="secondaryLogType" data-sb-validations="" />
+                                    <label class="form-check-label" for="optionB">option B</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" id="optionC" type="radio" name="secondaryLogType" data-sb-validations="" />
+                                    <label class="form-check-label" for="optionC">option C</label>
+                                </div>
                             </div>
                         </div>
                         
