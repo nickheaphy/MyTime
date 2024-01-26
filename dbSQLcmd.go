@@ -33,30 +33,11 @@ const createEvent string = `
 	FOREIGN KEY(secondary_id) REFERENCES secondary_category(id)
 	);`
 
-var defaultCategories = map[string][]string{
-	"Presales#ff00": {
-		"RFP",
-		"Solution Scope",
-	},
-	"Project#aabb": {
-		"Solution Design",
-		"Meeting",
-		"Training Material",
-	},
-	"Postsales#1111": {
-		"Meeting",
-		"Technical Help",
-	},
-	"Internal#1234": {
-		"Training Video",
-		"Service API",
-		"Print Hub",
-	},
-	"Leave#7666": {
-		"Annual Leave",
-		"Sick Leave",
-		"Birthday Leave",
-		"Volunteer Day",
-		"TIL",
-	},
+var newDefaultCategories = [][]string{
+	{"Presales#3fe06a", "RFP", "Solution Scope", "Sample Prints", "Sales Demo"},
+	{"Project#3fe0d3", "Solution Design", "Meeting", "Training Material", "Pilot"},
+	{"Training#b23fe0", "Customer", "Sales", "Technical", "Videos"},
+	{"Postsales#e0873f", "Meeting", "Technical Support", "Consultancy"},
+	{"Internal#e0d83f", "Meeting", "PD", "Process Development", "Admin", "Showroom", "Sales Support"},
+	{"Leave#666664", "Annual Leave", "Sick Leave", "Birthday Leave", "Volunteer Day", "TIL"},
 }

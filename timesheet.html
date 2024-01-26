@@ -44,6 +44,7 @@
             pc.replaceChildren();
             for (let i = 0; i < categoriesArray.length; i++) {
                 if (categoriesArray[i].ID == selectedPrimaryID) {
+                    document.getElementById("bgcolour").value = categoriesArray[i].Colour
                     for (let j = 0; j < categoriesArray[i].Secondary.length; j++) {
                         var newDiv = document.createElement("div");
                         newDiv.setAttribute('class','form-check form-check-inline')
@@ -70,7 +71,7 @@
         }
 
         //Handle the save button being pressed
-        function saveEventData() {
+        async function saveEventData() {
             const form = document.getElementById("eventForm")
             //get the form data
             const formdata = serializeForm(form)
@@ -78,21 +79,32 @@
             // perform validation here
             // check that fields are filled in
             if (true) {
+            
+                //write/update the database
+                const data = new URLSearchParams();
+                for (const pair of new FormData(form)) {
+                    data.append(pair[0], pair[1]);
+                }
+                const responce = await fetch("/saveEventDatatoDB", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: data
+                })
+                console.log("Save to database Ajax ")
+                var neweventid = await responce.text()
+                console.log("New event id: " + neweventid)
                 // write the event to screen
+                // need to move this to after the post to db so can get the ID
                 var thenewevent = myTimeCalendar.addEvent({
+                    id: neweventid,
                     title: formdata.description + " (" + formdata.customer + ")",
                     start: formdata.start,
                     end: formdata.end,
-                    backgroundColor: 'red'
+                    borderColor: '#' + formdata.bgcolour,
+                    backgroundColor: "#" + LightenDarkenColor(formdata.bgcolour, 30)
                 })
-
-                //write/update the database
-                console.log("Save to database Ajax ")
-                console.log(formdata)
-                const xhttp = new XMLHttpRequest();
-                xhttp.open("POST", "/saveEventDatatoDB", true);
-                xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-                xhttp.send(formdata);
 
                 // close the modal
                 var myModalEl = document.getElementById("exampleModal")
@@ -113,33 +125,31 @@
         // show the modal dialog
         async function showModelDialog(arg) {
             var myModal = new bootstrap.Modal(document.getElementById("exampleModal"), {});
+            // set the start and end hidden fields
+            document.getElementById("start").value = arg.start.toISOString()
+            document.getElementById("end").value = arg.end.toISOString()
             // get category data
             //https://www.freecodecamp.org/news/how-to-fetch-data-from-an-api-using-the-fetch-api-in-javascript/
             const response = await fetch('/getCategoriesfromDB')
             categoriesArray = await response.json()
 
-            // need a function to build the primaryLogType radio array
-            // needs to set a callback onclick to build the secondary array
-            // need to be able to call with an id to select primary and secondary
-            // radio selections
+            // Build the radio buttons
             buildPrimaryCategories(1)
-            buildSecondaryCategories(1, 14)
+            buildSecondaryCategories(1, 0)
             // set the modal data
-            setModelData(arg)
             myModal.show();
         }
-        // sets all the model data before being displayed
-        function setModelData(arg) {
-            document.getElementById("exampleModalLabel").innerHTML = arg.start.toISOString()
-            document.getElementById("start").value = arg.start.toISOString()
-            document.getElementById("end").value = arg.end.toISOString()
-            //reset the description (but leave the other items)
-            document.getElementById("description").value = "";
-        }
+        
         // function to handle user changing the description
         function userChangedDesc() {
             // need to update the form fields to the ones previously used for that description
             console.log("Need to update screen")
+        }
+
+        // change the colours
+        function LightenDarkenColor(col, amt) {
+            col = parseInt(col, 16);
+            return (((col & 0x0000FF) + amt) | ((((col >> 8) & 0x00FF) + amt) << 8) | (((col >> 16) + amt) << 16)).toString(16);
         }
 
     </script>
@@ -208,26 +218,26 @@
                 // need to load the calendar events from the database into an events array here
                 // to match the physical timesheet, should also have some events with display: background
                 // to have the gray boxes on the timesheet.
-                events: [
-                    {
-                        start: '2024-01-18T00:00:00',
-                        end: '2024-01-18T08:30:00',
-                        backgroundColor: '#C9C9C9',
-                        display: 'background'
-                    },
-                    {
-                        start: '2024-01-18T12:00:00',
-                        end: '2024-01-18T13:00:00',
-                        backgroundColor: '#C9C9C9',
-                        display: 'background'
-                    },
-                    {
-                        start: '2024-01-18T17:00:00',
-                        end: '2024-01-18T23:59:59',
-                        backgroundColor: '#C9C9C9',
-                        display: 'background'
-                    },
-                ] 
+                // events: [
+                //     {
+                //         start: '2024-01-18T00:00:00',
+                //         end: '2024-01-18T08:30:00',
+                //         backgroundColor: '#C9C9C9',
+                //         display: 'background'
+                //     },
+                //     {
+                //         start: '2024-01-18T12:00:00',
+                //         end: '2024-01-18T13:00:00',
+                //         backgroundColor: '#C9C9C9',
+                //         display: 'background'
+                //     },
+                //     {
+                //         start: '2024-01-18T17:00:00',
+                //         end: '2024-01-18T23:59:59',
+                //         backgroundColor: '#C9C9C9',
+                //         display: 'background'
+                //     },
+                // ] 
             })
 
             myTimeCalendar.render()
@@ -243,23 +253,18 @@
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
-              <h1 class="modal-title fs-5" id="exampleModalLabel">Modal title</h1>
+              <h1 class="modal-title fs-5" id="exampleModalLabel">Add Time Log</h1>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
 
                 <div class="container px-5 my-5">
                     <form id="eventForm">
-                        <div class="form-floating mb-3">
-                            <div class="row">
-                                <div class="col">
-                                    <input name="start" class="form-control" id="start" type="text" placeholder="Start" />
-                                </div>
-                                <div class="col">
-                                    <input name="end" class="form-control" id="end" type="text" placeholder="End" />
-                                </div>
-                            </div>
-                        </div>
+                        <!-- Hidden data fields for passing stuff -->
+                        <input name="start" id="start" type="hidden" />
+                        <input name="end" id="end" type="hidden" />
+                        <input name="bgcolour" id="bgcolour" type="hidden" />
+                        
                         <div class="form-floating mb-3">
                             <input name="description" onchange="userChangedDesc();" list="descriptionOptions" class="form-control" id="description" type="text" placeholder="Description" />
                             <label for="description">Description</label>

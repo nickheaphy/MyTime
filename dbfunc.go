@@ -39,33 +39,32 @@ func Opendatabase(dbfile string) *sql.DB {
 
 	// add or update the categories
 	//row := c.db.QueryRow("SELECT id, time, description FROM activities WHERE id=?", id)
-
-	for k, v := range defaultCategories {
-		namecolour := strings.Split(k, "#")
-		row := db.QueryRow("SELECT id FROM primary_category WHERE name=?", namecolour[0])
-		var id int64
-		if row.Scan(&id) == sql.ErrNoRows {
-			// need to create
-			res, err := db.Exec("INSERT INTO primary_category(name,colour) VALUES(?,?)", namecolour[0], namecolour[1])
-			if err != nil {
-				log.Fatal("Insert fail: ", err)
-			}
-			id, err = res.LastInsertId()
-		}
-
-		// need to add all the secondary categories
-		for _, secondarycat := range v {
-			row := db.QueryRow("SELECT id FROM secondary_category WHERE primary_id=? AND name=?", id, secondarycat)
-			if row.Scan(id) == sql.ErrNoRows {
-				// need to create
-				_, err := db.Exec("INSERT INTO secondary_category(name,primary_id) VALUES(?,?)", secondarycat, id)
-				if err != nil {
-					log.Fatal("Insert fail: ", err)
+	var id, id2 int64
+	for _, items := range newDefaultCategories {
+		for j, category := range items {
+			if j == 0 {
+				namecolour := strings.Split(category, "#")
+				row := db.QueryRow("SELECT id FROM primary_category WHERE name=?", namecolour[0])
+				if row.Scan(&id) == sql.ErrNoRows {
+					// need to create
+					res, err := db.Exec("INSERT INTO primary_category(name,colour) VALUES(?,?)", namecolour[0], namecolour[1])
+					if err != nil {
+						log.Fatal("Insert fail: ", err)
+					}
+					id, _ = res.LastInsertId()
+				}
+			} else {
+				// need to add all the secondary categories
+				row := db.QueryRow("SELECT id FROM secondary_category WHERE primary_id=? AND name=?", id, category)
+				if row.Scan(&id2) == sql.ErrNoRows {
+					// need to create
+					_, err := db.Exec("INSERT INTO secondary_category(name,primary_id) VALUES(?,?)", category, id)
+					if err != nil {
+						log.Fatal("Insert fail: ", err)
+					}
 				}
 			}
-
 		}
-
 	}
 
 	return db
@@ -100,7 +99,7 @@ func getCategoriesJSON(db *sql.DB) (json_data string, err error) {
 		if err != nil {
 			log.Println("Scan of primary category failed, ", err)
 		} else {
-			rows2, err := db.Query("SELECT id, name from secondary_category WHERE primary_id=?", pc.ID)
+			rows2, err := db.Query("SELECT id, name from secondary_category WHERE primary_id=? ORDER BY name", pc.ID)
 			if err != nil {
 				log.Fatal("Could not get secondary_category data")
 			}
@@ -114,18 +113,14 @@ func getCategoriesJSON(db *sql.DB) (json_data string, err error) {
 					pc.Secondary = append(pc.Secondary, sc)
 				}
 			}
-			log.Println(pc)
 			categories = append(categories, pc)
 		}
 	}
-
-	log.Println(categories)
 
 	b, err := json.Marshal(categories)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Println(string(b))
 
 	return string(b), nil
 }

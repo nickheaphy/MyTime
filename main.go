@@ -28,8 +28,7 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
 func saveEventDatatoDB(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("got /saveEventDatatoDB request\n")
 	if r.Method == "POST" {
-		data := r.FormValue("post_data")
-		fmt.Println("Receive ajax post data string ", data)
+		fmt.Println("Receive ajax post data string...")
 		r.ParseForm()
 		for key, value := range r.Form {
 			fmt.Printf("%s - %s\n", key, value)
@@ -39,6 +38,7 @@ func saveEventDatatoDB(w http.ResponseWriter, r *http.Request) {
 		//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		//w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 		//w.Write([]byte(tpl.String()))
+		w.Write([]byte("99"))
 	}
 }
 
