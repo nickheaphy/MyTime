@@ -13,6 +13,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// --------------------------------------------------------------------
 func Opendatabase(dbfile string) *sql.DB {
 	db, err := sql.Open("sqlite", dbfile)
 	if err != nil {
@@ -70,6 +71,7 @@ func Opendatabase(dbfile string) *sql.DB {
 	return db
 }
 
+// --------------------------------------------------------------------
 func getCategoriesJSON(db *sql.DB) (json_data string, err error) {
 
 	type secondary_category struct {
@@ -108,7 +110,7 @@ func getCategoriesJSON(db *sql.DB) (json_data string, err error) {
 				var sc secondary_category
 				err := rows2.Scan(&sc.ID, &sc.Name)
 				if err != nil {
-					log.Println("Scan of secondardy category failed, ", err)
+					log.Println("Scan of secondary category failed, ", err)
 				} else {
 					pc.Secondary = append(pc.Secondary, sc)
 				}
@@ -123,4 +125,117 @@ func getCategoriesJSON(db *sql.DB) (json_data string, err error) {
 	}
 
 	return string(b), nil
+}
+
+// --------------------------------------------------------------------
+func getEventsJSON(db *sql.DB, start string, end string) (json_data string, err error) {
+
+	type event struct {
+		ID          int64
+		Description string
+		Start       string
+		End         string
+		Customer    string
+		Colour      string
+	}
+
+	rows, err := db.Query(`SELECT
+			event.id,
+			event.description,
+			event.start,
+			event.end,
+			customer.customername,
+			primary_category.colour
+		FROM event
+		JOIN customer on event.customer_id = customer.id
+		JOIN primary_category on event.primary_id=primary_category.id
+		WHERE start>=? AND end <=?`,
+		start, end)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	var events []event
+	// loop thought the rows
+	for rows.Next() {
+		var e event
+		err := rows.Scan(&e.ID, &e.Description, &e.Start, &e.End, &e.Customer, &e.Colour)
+		if err != nil {
+			log.Println("Scan of event, ", err)
+		} else {
+			events = append(events, e)
+		}
+	}
+
+	b, err := json.Marshal(events)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	return string(b), nil
+}
+
+// --------------------------------------------------------------------
+func putCustomertoDB(db *sql.DB, customer string) (databaseid int64, err error) {
+	row := db.QueryRow("SELECT id from customer WHERE customername = ?", customer)
+	if row.Scan(&databaseid) == sql.ErrNoRows {
+		// need to create
+		log.Println("Creating customer: ", customer)
+		res, err := db.Exec("INSERT INTO customer (customername) VALUES (?)", customer)
+		if err != nil {
+			log.Println("putCustomertoDB:Insert customer fail: ", err)
+			return 0, err
+		}
+		databaseid, _ = res.LastInsertId()
+		log.Println("Customer ID: ", databaseid)
+	}
+	return databaseid, nil
+}
+
+// --------------------------------------------------------------------
+func putEventDatatoDB(db *sql.DB, event eventData) (databaseid int64, err error) {
+	// either add or update event data in the database
+	if event.id == 0 {
+		// need to add to the database
+		customerid, err := putCustomertoDB(db, event.customer)
+		if err != nil {
+			log.Println("putEventDatatoDB: Could not get customer ID:", err)
+			return 0, err
+		}
+		res, err := db.Exec("INSERT INTO event (description, start, end, customer_id, primary_id, secondary_id) VALUES (?, ?, ?,?,?,?)",
+			event.description, event.start, event.end, customerid, event.primaryLogType, event.secondaryLogType)
+		if err != nil {
+			log.Println("putEventDatatoDB: Could not insert event:", err)
+			return 0, err
+		}
+		databaseid, _ = res.LastInsertId()
+	} else {
+		// need to update the database
+		customerid, err := putCustomertoDB(db, event.customer)
+		if err != nil {
+			log.Println("putEventDatatoDB: Could not get customer ID:", err)
+			return 0, err
+		}
+		_, err = db.Exec("UPDATE event SET description=?, start=?, end=?, customer_id=?, primary_id=?, secondary_id=? WHERE id=?",
+			event.description, event.start, event.end, customerid, event.primaryLogType, event.secondaryLogType, event.id)
+		if err != nil {
+			log.Println("putEventDatatoDB: Could not insert event:", err)
+			return 0, err
+		}
+		databaseid = event.id
+	}
+	return databaseid, nil
+}
+
+// --------------------------------------------------------------------
+func putEventTimeChangetoDB(db *sql.DB, event eventData) (err error) {
+	// need to update the times
+	log.Println("ID:? Start:? End:?", event.id, event.start, event.end)
+	_, err = db.Exec("UPDATE event SET start=?, end=? WHERE id=?",
+		event.start, event.end, event.id)
+	if err != nil {
+		log.Println("putEventTimeChangetoDB: Could not update event:", err)
+		return err
+	}
+	return nil
 }

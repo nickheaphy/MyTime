@@ -4,6 +4,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <link href='https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css' rel='stylesheet'>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js'></script>
+    <script src='helperfunctions.js'></script>
     <script>
         // global variable to hold the categories
         var categoriesArray = [];
@@ -78,7 +79,8 @@
 
             // perform validation here
             // check that fields are filled in
-            if (true) {
+            console.log(formdata)
+            if (validateFormData(formdata)) {
             
                 //write/update the database
                 const data = new URLSearchParams();
@@ -110,6 +112,8 @@
                 var myModalEl = document.getElementById("exampleModal")
                 var modal = bootstrap.Modal.getInstance(myModalEl)
                 modal.hide();
+            } else {
+                // TODO - display a missing fields warning
             }
         }
 
@@ -125,6 +129,9 @@
         // show the modal dialog
         async function showModelDialog(arg) {
             var myModal = new bootstrap.Modal(document.getElementById("exampleModal"), {});
+            // need to check the arg to figure out if we are loading an existing dialog
+            // or building a new one.
+
             // set the start and end hidden fields
             document.getElementById("start").value = arg.start.toISOString()
             document.getElementById("end").value = arg.end.toISOString()
@@ -135,21 +142,59 @@
 
             // Build the radio buttons
             buildPrimaryCategories(1)
-            buildSecondaryCategories(1, 0)
+            buildSecondaryCategories(1, 1)
             // set the modal data
             myModal.show();
         }
         
+        async function updateExistingEvent(event) {
+            //user has drag an event. Need to update the times in database
+            //write/update the database
+            const data = new URLSearchParams();
+            data.append("id", event.id);
+            data.append("start", event.start.toISOString());
+            data.append("end", event.end.toISOString());
+            const responce = await fetch("/updateEventDatatoDB", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: data
+            })
+        }
+
         // function to handle user changing the description
         function userChangedDesc() {
             // need to update the form fields to the ones previously used for that description
             console.log("Need to update screen")
         }
 
-        // change the colours
-        function LightenDarkenColor(col, amt) {
-            col = parseInt(col, 16);
-            return (((col & 0x0000FF) + amt) | ((((col >> 8) & 0x00FF) + amt) << 8) | (((col >> 16) + amt) << 16)).toString(16);
+        // function to get the event data from the database
+        async function populateCalendar(start, end) {
+            //write/update the database
+            const data = new URLSearchParams();
+            data.append("start", start);
+            data.append("end", end);
+            try {
+                const responce = await fetch("/getEventDatafromDB?"+data.toString())
+                const events =  await responce.json()
+                console.log(events)
+                if (events != null) {
+                    events.forEach(event => {
+                        myTimeCalendar.addEvent({
+                            title: event.Description + " (" + event.Customer + ")",
+                            start: event.Start,
+                            end: event.End,
+                            borderColor: '#' + event.Colour,
+                            backgroundColor: "#" + LightenDarkenColor(event.Colour, 30)
+                        }
+                        )
+                    });
+                }
+            } catch (error) {
+                console.log(error)
+            }
+                    
         }
 
     </script>
@@ -169,34 +214,7 @@
                 unselectAuto: false,
                 selectMirror: true,
                 select: function(arg) {
-                    // User has created a date range.
-                    // Need to add to the events and to the database
-                    // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/dialog
-                    // https://stackoverflow.com/questions/41570878/jquery-dialog-popup-returns-json-to-new-page-instead-of-current-page
-                    // this needs to be a proper model dialog with the
-                    // data that I want to store
-                    // var myModal = new bootstrap.Modal(document.getElementById("exampleModal"), {});
-                    // // set the modal data
-                    // setModelData(arg)
-                    // myModal.show();
                     showModelDialog(arg)
-
-                    // var title = prompt('Event Title:');
-                    // if (title) {
-                    //     var thenewevent = calendar.addEvent({
-                    //         title: title,
-                    //         start: arg.start,
-                    //         end: arg.end,
-                    //         allDay: arg.allDay,
-                    //         backgroundColor: 'red'
-                    //     })
-                    //     // this is where it needs to ajax the backend DB to store
-                    //     console.log("Save to database Ajax " + arg.start.toISOString() + " to " + arg.end.toISOString())
-                    //     const xhttp = new XMLHttpRequest();
-                    //     xhttp.open("POST", "/saveEventDatatoDB", true);
-                    //     xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-                    //     xhttp.send("start="+arg.start.toISOString()+"&end="+arg.end.toISOString());
-                    // }
                     myTimeCalendar.unselect()
                 },
                 eventClick: function(arg) {
@@ -207,37 +225,16 @@
                         arg.event.remove()
                     }
                 },
+                eventChange: function(arg) {
+                    console.log("eventChange")
+                    updateExistingEvent(arg.event)
+                },
                 datesSet: function(arg) {
                     console.log(arg.start.toISOString()+ " to " + arg.end.toISOString())
                     // this should load the data from the database for the period
-                    const xhttp = new XMLHttpRequest();
-                    xhttp.open("GET", "/getEventDatafromDB?start="+arg.start.toISOString()+"&end="+arg.end.toISOString(), true);
-                    xhttp.send("test");
+                    populateCalendar(arg.start.toISOString(), arg.end.toISOString())
                 },
                 editable: true,
-                // need to load the calendar events from the database into an events array here
-                // to match the physical timesheet, should also have some events with display: background
-                // to have the gray boxes on the timesheet.
-                // events: [
-                //     {
-                //         start: '2024-01-18T00:00:00',
-                //         end: '2024-01-18T08:30:00',
-                //         backgroundColor: '#C9C9C9',
-                //         display: 'background'
-                //     },
-                //     {
-                //         start: '2024-01-18T12:00:00',
-                //         end: '2024-01-18T13:00:00',
-                //         backgroundColor: '#C9C9C9',
-                //         display: 'background'
-                //     },
-                //     {
-                //         start: '2024-01-18T17:00:00',
-                //         end: '2024-01-18T23:59:59',
-                //         backgroundColor: '#C9C9C9',
-                //         display: 'background'
-                //     },
-                // ] 
             })
 
             myTimeCalendar.render()
