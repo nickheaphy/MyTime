@@ -131,12 +131,14 @@ func getCategoriesJSON(db *sql.DB) (json_data string, err error) {
 func getEventsJSON(db *sql.DB, start string, end string) (json_data string, err error) {
 
 	type event struct {
-		ID          int64
-		Description string
-		Start       string
-		End         string
-		Customer    string
-		Colour      string
+		ID           int64
+		Description  string
+		Start        string
+		End          string
+		Customer     string
+		Colour       string
+		Primary_id   int64
+		Secondary_id int64
 	}
 
 	rows, err := db.Query(`SELECT
@@ -145,7 +147,9 @@ func getEventsJSON(db *sql.DB, start string, end string) (json_data string, err 
 			event.start,
 			event.end,
 			customer.customername,
-			primary_category.colour
+			primary_category.colour,
+			event.primary_id,
+			event.secondary_id
 		FROM event
 		JOIN customer on event.customer_id = customer.id
 		JOIN primary_category on event.primary_id=primary_category.id
@@ -160,7 +164,7 @@ func getEventsJSON(db *sql.DB, start string, end string) (json_data string, err 
 	// loop thought the rows
 	for rows.Next() {
 		var e event
-		err := rows.Scan(&e.ID, &e.Description, &e.Start, &e.End, &e.Customer, &e.Colour)
+		err := rows.Scan(&e.ID, &e.Description, &e.Start, &e.End, &e.Customer, &e.Colour, &e.Primary_id, &e.Secondary_id)
 		if err != nil {
 			log.Println("Scan of event, ", err)
 		} else {

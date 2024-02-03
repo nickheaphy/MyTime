@@ -105,8 +105,13 @@
                     start: formdata.start,
                     end: formdata.end,
                     borderColor: '#' + formdata.bgcolour,
-                    backgroundColor: "#" + LightenDarkenColor(formdata.bgcolour, 30)
+                    backgroundColor: "#" + LightenDarkenColor(formdata.bgcolour, 30),
+                    extendedProps: {
+                        primaryCategory: formdata.primaryLogType,
+                        secondaryCategory: formdata.secondaryLogType
+                    }
                 })
+                // also need to write to the 
 
                 // close the modal
                 var myModalEl = document.getElementById("exampleModal")
@@ -131,7 +136,8 @@
             var myModal = new bootstrap.Modal(document.getElementById("exampleModal"), {});
             // need to check the arg to figure out if we are loading an existing dialog
             // or building a new one.
-
+            // an existing event has an id, a new one does not
+            
             // set the start and end hidden fields
             document.getElementById("start").value = arg.start.toISOString()
             document.getElementById("end").value = arg.end.toISOString()
@@ -140,9 +146,23 @@
             const response = await fetch('/getCategoriesfromDB')
             categoriesArray = await response.json()
 
-            // Build the radio buttons
-            buildPrimaryCategories(1)
-            buildSecondaryCategories(1, 1)
+            if (arg["id"] != undefined) {
+                console.log("editing event: " + arg["id"])
+                document.getElementById("exampleModalLabel").innerHTML = "Edit Event"
+                // need to set the model fields based on the existing event data
+                // Build the radio buttons
+                buildPrimaryCategories(arg.extendedProps.primaryCategory)
+                buildSecondaryCategories(arg.extendedProps.primaryCategory, arg.extendedProps.secondaryCategory)
+                //set the fields
+                
+            } else {
+                // had the delete event button
+                document.getElementById("deleteEventButton").classList.add("invisible")
+                // Build the radio buttons, default selections
+                buildPrimaryCategories(1)
+                buildSecondaryCategories(1, 1)
+            }
+            
             // set the modal data
             myModal.show();
         }
@@ -182,11 +202,16 @@
                 if (events != null) {
                     events.forEach(event => {
                         myTimeCalendar.addEvent({
+                            id: event.ID,
                             title: event.Description + " (" + event.Customer + ")",
                             start: event.Start,
                             end: event.End,
                             borderColor: '#' + event.Colour,
-                            backgroundColor: "#" + LightenDarkenColor(event.Colour, 30)
+                            backgroundColor: "#" + LightenDarkenColor(event.Colour, 30),
+                            extendedProps: {
+                                primaryCategory: event.Primary_id,
+                                secondaryCategory: event.Secondary_id
+                            }
                         }
                         )
                     });
@@ -220,10 +245,12 @@
                 eventClick: function(arg) {
                     // User has clicked on an existing item. Need to offer ability to
                     // edit or remove.
+                    showModelDialog(arg.event)
+                    myTimeCalendar.unselect()
                     // Need to add/remove from the database
-                    if (confirm('Are you sure you want to delete this event?')) {
-                        arg.event.remove()
-                    }
+                    // if (confirm('Are you sure you want to delete this event?')) {
+                    //     arg.event.remove()
+                    // }
                 },
                 eventChange: function(arg) {
                     console.log("eventChange")
@@ -326,8 +353,9 @@
 
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-              <button onclick="saveEventData()" id="saveEventButton" type="button" class="btn btn-primary">Save changes</button>
+                <button onclick="deleteEventData()" id="deleteEventButton" type="button" class="btn btn-warning" data-bs-dismiss="modal">Delete</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button onclick="saveEventData()" id="saveEventButton" type="button" class="btn btn-primary">Save changes</button>
             </div>
           </div>
         </div>
