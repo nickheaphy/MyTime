@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <style>
+        body {
+            background-color: #FF3CAC;
+            background-image: linear-gradient(225deg, #FF3CAC 0%, #784BA0 50%, #2B86C5 100%);
+        }
+
+        #calendarholder {
+            background-color: white;
+            margin: 30px;
+            padding: 10px;
+            border-radius: 20px;
+            box-shadow: 0 0 5 5 black;
+            height: 100%;
+        }
+
+    </style>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <link href='https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css' rel='stylesheet'>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js'></script>
@@ -104,8 +120,8 @@
                     title: formdata.description + " (" + formdata.customer + ")",
                     start: formdata.start,
                     end: formdata.end,
-                    borderColor: '#' + formdata.bgcolour,
-                    backgroundColor: "#" + LightenDarkenColor(formdata.bgcolour, 30),
+                    borderColor: '#' + LightenDarkenColor(formdata.bgcolour, -30),
+                    backgroundColor: "#" + formdata.bgcolour,
                     extendedProps: {
                         primaryCategory: formdata.primaryLogType,
                         secondaryCategory: formdata.secondaryLogType
@@ -154,7 +170,7 @@
                 buildPrimaryCategories(arg.extendedProps.primaryCategory)
                 buildSecondaryCategories(arg.extendedProps.primaryCategory, arg.extendedProps.secondaryCategory)
                 //set the fields
-                
+
             } else {
                 // had the delete event button
                 document.getElementById("deleteEventButton").classList.add("invisible")
@@ -192,6 +208,7 @@
         // function to get the event data from the database
         async function populateCalendar(start, end) {
             //write/update the database
+            myTimeCalendar.removeAllEvents();
             const data = new URLSearchParams();
             data.append("start", start);
             data.append("end", end);
@@ -206,8 +223,8 @@
                             title: event.Description + " (" + event.Customer + ")",
                             start: event.Start,
                             end: event.End,
-                            borderColor: '#' + event.Colour,
-                            backgroundColor: "#" + LightenDarkenColor(event.Colour, 30),
+                            borderColor: '#' + LightenDarkenColor(event.Colour, -30),
+                            backgroundColor: "#" + event.Colour,
                             extendedProps: {
                                 primaryCategory: event.Primary_id,
                                 secondaryCategory: event.Secondary_id
@@ -219,7 +236,40 @@
             } catch (error) {
                 console.log(error)
             }
-                    
+            // now put in the background events
+            var loop = new Date(start);
+            var loopend = new Date(end);
+            while(loop < loopend){
+                if (loop.getDay() > 0 && loop.getDay() <=5) {
+                    myTimeCalendar.addEvent({
+                        start: loop.setHours(0, 0),
+                        end: loop.setHours(8,30),
+                        backgroundColor: '#aaa',
+                        display: 'background'
+                    })
+                    myTimeCalendar.addEvent({
+                        start: loop.setHours(12, 0),
+                        end: loop.setHours(13, 0),
+                        backgroundColor: '#aaa',
+                        display: 'background'
+                    })
+                    myTimeCalendar.addEvent({
+                        start: loop.setHours(17, 0),
+                        end: loop.setHours(23,59),
+                        backgroundColor: '#aaa',
+                        display: 'background'
+                    })
+                } else {
+                    myTimeCalendar.addEvent({
+                        start: loop.setHours(0, 0),
+                        end: loop.setHours(23, 59),
+                        backgroundColor: '#aaa',
+                        display: 'background'
+                    })
+                }
+                var newDate = loop.setDate(loop.getDate() + 1);
+                loop = new Date(newDate);
+            }
         }
 
     </script>
@@ -232,11 +282,31 @@
             myTimeCalendar = new FullCalendar.Calendar(calendarEl, {
                 firstDay: 1,
                 initialView: 'timeGridWeek',
+                headerToolbar: {
+                    left: 'prev,next,today',
+                    center: 'title',
+                    right: 'timeGridWeek,sevenDay' // user can switch between the two
+                },
+                views: {
+                    sevenDay: {
+                        type: 'timeGridWeek',
+                        duration: { days: 7 },
+                        weekends: true,
+                        slotMinTime: "00:00:00",
+                        slotMaxTime: "23:59:59"
+                    }
+                },
                 slotDuration: '00:15',
                 slotLabelInterval: '01:00',
+                slotMinTime: "06:00:00",
+                slotMaxTime: "19:00:00",
                 themeSystem: 'bootstrap5',
+                scrollTime: "08:30:00",
                 selectable: true,
                 unselectAuto: false,
+                contentHeight:"auto",
+                weekends: false,
+                allDaySlot: false,
                 selectMirror: true,
                 select: function(arg) {
                     showModelDialog(arg)
@@ -270,7 +340,9 @@
     </script>
   </head>
   <body>
-    <div id='calendar'></div>
+    <div id='calendarholder'>
+        <div id='calendar'></div>
+    </div>
 
     <!-- Modal Dialog-->
     <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">

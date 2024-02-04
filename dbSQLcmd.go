@@ -43,13 +43,18 @@ const get30Events string = `
 	SELECT * FROM event ORDER BY end LIMIT 30
 `
 
+// --space-cadet: #21295cff;
+// --yale-blue: #1b3b6fff;
+// --lapis-lazuli: #065a82ff;
+// --cerulean: #1c7293ff;
+// --powder-blue: #9eb3c2ff;
 var newDefaultCategories = [][]string{
-	{"Presales#3fe06a", "RFP", "Solution Scope", "Sample Prints", "Sales Demo"},
-	{"Project#3fe0d3", "Solution Design", "Meeting", "Training Material", "Pilot"},
-	{"Training#b23fe0", "Customer", "Sales", "Technical", "Videos"},
-	{"Postsales#e0873f", "Meeting", "Technical Support", "Consultancy"},
-	{"Internal#e0d83f", "Meeting", "PD", "Process Development", "Admin", "Showroom", "Sales Support"},
-	{"Leave#666664", "Annual Leave", "Sick Leave", "Birthday Leave", "Volunteer Day", "TIL"},
+	{"Presales#21295cff", "RFP", "Solution Scope", "Sample Prints", "Sales Demo"},
+	{"Project#1b3b6fff", "Solution Design", "Meeting", "Training Material", "Pilot"},
+	{"Training#065a82ff", "Customer", "Sales", "Technical", "Videos"},
+	{"Postsales#2491bcff", "Meeting", "Technical Support", "Consultancy"},
+	{"Internal#1c7293ff", "Meeting", "PD", "Process Development", "Admin", "Showroom", "Sales Support"},
+	{"Leave#9eb3c2ff", "Annual Leave", "Sick Leave", "Birthday Leave", "Volunteer Day", "TIL"},
 }
 
 type eventData struct {
