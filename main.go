@@ -38,7 +38,7 @@ func saveEventDatatoDB(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		event := eventData{}
-		id := r.Form.Get("id")
+		id := r.Form.Get("eventid")
 		if id != "" {
 			event.id, err = strconv.ParseInt(id, 10, 64)
 			if err != nil {

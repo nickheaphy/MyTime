@@ -200,6 +200,7 @@ func putCustomertoDB(db *sql.DB, customer string) (databaseid int64, err error) 
 func putEventDatatoDB(db *sql.DB, event eventData) (databaseid int64, err error) {
 	// either add or update event data in the database
 	if event.id == 0 {
+		log.Println("putEventDatatoDB: Inserting to DB")
 		// need to add to the database
 		customerid, err := putCustomertoDB(db, event.customer)
 		if err != nil {
@@ -214,6 +215,7 @@ func putEventDatatoDB(db *sql.DB, event eventData) (databaseid int64, err error)
 		}
 		databaseid, _ = res.LastInsertId()
 	} else {
+		log.Println("putEventDatatoDB: Updating ", event.id)
 		// need to update the database
 		customerid, err := putCustomertoDB(db, event.customer)
 		if err != nil {

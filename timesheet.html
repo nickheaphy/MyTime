@@ -9,10 +9,10 @@
 
         #calendarholder {
             background-color: white;
-            margin: 30px;
-            padding: 10px;
-            border-radius: 20px;
-            box-shadow: 0 0 5 5 black;
+            margin: 40px;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0px 0px 25px 0px rgb(0, 0, 0);
             height: 100%;
         }
 
@@ -95,6 +95,9 @@
 
             // perform validation here
             // check that fields are filled in
+
+            // also need to figure out if we are editing an existing
+            // event.
             console.log(formdata)
             if (validateFormData(formdata)) {
             
@@ -111,9 +114,14 @@
                     body: data
                 })
                 console.log("Save to database Ajax ")
+                console.log(data)
                 var neweventid = await responce.text()
                 console.log("New event id: " + neweventid)
                 // write the event to screen
+                // or delete and add with the new details
+                if (myTimeCalendar.getEventById(formdata.eventid) != null) {
+                    myTimeCalendar.getEventById(formdata.eventid).remove()
+                }
                 // need to move this to after the post to db so can get the ID
                 var thenewevent = myTimeCalendar.addEvent({
                     id: neweventid,
@@ -157,6 +165,11 @@
             // set the start and end hidden fields
             document.getElementById("start").value = arg.start.toISOString()
             document.getElementById("end").value = arg.end.toISOString()
+            if (arg.id) {
+                document.getElementById("eventid").value = arg.id
+            } else {
+                document.getElementById("eventid").value = 0
+            }
             // get category data
             //https://www.freecodecamp.org/news/how-to-fetch-data-from-an-api-using-the-fetch-api-in-javascript/
             const response = await fetch('/getCategoriesfromDB')
@@ -165,15 +178,19 @@
             if (arg["id"] != undefined) {
                 console.log("editing event: " + arg["id"])
                 document.getElementById("exampleModalLabel").innerHTML = "Edit Event"
+                document.getElementById("deleteEventButton").classList.remove("invisible")
+                // add the ID to the dialog
+                document.getElementById("eventid").value = arg["id"]
                 // need to set the model fields based on the existing event data
                 // Build the radio buttons
                 buildPrimaryCategories(arg.extendedProps.primaryCategory)
                 buildSecondaryCategories(arg.extendedProps.primaryCategory, arg.extendedProps.secondaryCategory)
                 //set the fields
-
+                
             } else {
-                // had the delete event button
+                // hide the delete event button
                 document.getElementById("deleteEventButton").classList.add("invisible")
+                document.getElementById("eventid").value = 0
                 // Build the radio buttons, default selections
                 buildPrimaryCategories(1)
                 buildSecondaryCategories(1, 1)
@@ -285,7 +302,7 @@
                 headerToolbar: {
                     left: 'prev,next,today',
                     center: 'title',
-                    right: 'timeGridWeek,sevenDay' // user can switch between the two
+                    right: 'report timeGridWeek,sevenDay' // user can switch between the two
                 },
                 views: {
                     sevenDay: {
@@ -296,9 +313,17 @@
                         slotMaxTime: "23:59:59"
                     }
                 },
+                customButtons: {
+                    report: {
+                        text: 'Report',
+                        click: function() {
+                            alert('clicked the report button!');
+                        }
+                    }
+                },
                 slotDuration: '00:15',
                 slotLabelInterval: '01:00',
-                slotMinTime: "06:00:00",
+                slotMinTime: "07:00:00",
                 slotMaxTime: "19:00:00",
                 themeSystem: 'bootstrap5',
                 scrollTime: "08:30:00",
@@ -360,6 +385,7 @@
                         <input name="start" id="start" type="hidden" />
                         <input name="end" id="end" type="hidden" />
                         <input name="bgcolour" id="bgcolour" type="hidden" />
+                        <input name="eventid" id="eventid" type="hidden" value="0"/>
                         
                         <div class="form-floating mb-3">
                             <input name="description" onchange="userChangedDesc();" list="descriptionOptions" class="form-control" id="description" type="text" placeholder="Description" />
