@@ -22,8 +22,32 @@
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js'></script>
     <script src='helperfunctions.js'></script>
     <script>
-        // global variable to hold the categories
+        // global variable to hold the categories, event descriptions and customers
         var categoriesArray = [];
+        var descriptionArray = [];
+        var customerArray = [];
+
+        function buildDescriptionDatalist() {
+            descriptionArray = [...new Set(descriptionArray)].sort()
+            var desc = document.getElementById("descriptionOptions")
+            desc.replaceChildren();
+            for (i=0; i< descriptionArray.length; i++) {
+                var option = document.createElement('option');
+                option.value = descriptionArray[i];
+                desc.appendChild(option);
+            }
+        }
+
+        function buildCustomerDatalist() {
+            customerArray = [...new Set(customerArray)].sort()
+            var cust = document.getElementById("customerOptions")
+            cust.replaceChildren();
+            for (i=0; i< customerArray.length; i++) {
+                var option = document.createElement('option');
+                option.value = customerArray[i];
+                cust.appendChild(option);
+            }
+        }
 
         function buildPrimaryCategories(selectedCategoryID) {
             // from the Json, build the UI
@@ -125,21 +149,27 @@
                 // need to move this to after the post to db so can get the ID
                 var thenewevent = myTimeCalendar.addEvent({
                     id: neweventid,
-                    title: formdata.description + " (" + formdata.customer + ")",
+                    title: formdata.description + " [" + formdata.customer + "]",
                     start: formdata.start,
                     end: formdata.end,
                     borderColor: '#' + LightenDarkenColor(formdata.bgcolour, -30),
                     backgroundColor: "#" + formdata.bgcolour,
                     extendedProps: {
                         primaryCategory: formdata.primaryLogType,
-                        secondaryCategory: formdata.secondaryLogType
+                        secondaryCategory: formdata.secondaryLogType,
+                        customer: formdata.customer,
+                        description: formdata.description
                     }
                 })
-                // also need to write to the 
+                // also need to write to the description array
+                descriptionArray.push(formdata.description + " [" + formdata.customer + "]")
+                customerArray.push(formdata.customer)
 
                 // close the modal
                 var myModalEl = document.getElementById("exampleModal")
                 var modal = bootstrap.Modal.getInstance(myModalEl)
+                // reset the event id
+                document.getElementById("eventid").value = 0
                 modal.hide();
             } else {
                 // TODO - display a missing fields warning
@@ -175,6 +205,10 @@
             const response = await fetch('/getCategoriesfromDB')
             categoriesArray = await response.json()
 
+            // build the datalists
+            buildDescriptionDatalist()
+            buildCustomerDatalist()
+
             if (arg["id"] != undefined) {
                 console.log("editing event: " + arg["id"])
                 document.getElementById("exampleModalLabel").innerHTML = "Edit Event"
@@ -182,6 +216,8 @@
                 // add the ID to the dialog
                 document.getElementById("eventid").value = arg["id"]
                 // need to set the model fields based on the existing event data
+                document.getElementById("description").value = arg.extendedProps.description
+                document.getElementById("customer").value = arg.extendedProps.customer
                 // Build the radio buttons
                 buildPrimaryCategories(arg.extendedProps.primaryCategory)
                 buildSecondaryCategories(arg.extendedProps.primaryCategory, arg.extendedProps.secondaryCategory)
@@ -190,10 +226,25 @@
             } else {
                 // hide the delete event button
                 document.getElementById("deleteEventButton").classList.add("invisible")
+                // reset the eventid to 0 (this is for new events)
                 document.getElementById("eventid").value = 0
                 // Build the radio buttons, default selections
-                buildPrimaryCategories(1)
-                buildSecondaryCategories(1, 1)
+                // get the previously used selections
+                events = myTimeCalendar.getEvents()
+                foundid = false
+                for (let i = events.length - 1; i >= 0; i--) {
+                    const event = events[i];
+                    if (event.id) {
+                        buildPrimaryCategories(event.extendedProps.primaryCategory)
+                        buildSecondaryCategories(event.extendedProps.primaryCategory, event.extendedProps.secondaryCategory)
+                        foundid = true
+                        break;
+                    }
+                }
+                if (!foundid) {
+                    buildPrimaryCategories(1)
+                    buildSecondaryCategories(1,0)
+                }
             }
             
             // set the modal data
@@ -216,10 +267,42 @@
             })
         }
 
+        async function deleteEventData() {
+            // this is bad. This really needs some validation!
+            idtodelete = document.getElementById("eventid").value
+            if (idtodelete != null && idtodelete != 0) {
+                const data = new URLSearchParams();
+                data.append("id", idtodelete);
+                const responce = await fetch("/deleteEventDatafromDB", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: data
+                })
+                myTimeCalendar.getEventById(idtodelete).remove()
+            }
+        }
+
         // function to handle user changing the description
         function userChangedDesc() {
             // need to update the form fields to the ones previously used for that description
             console.log("Need to update screen")
+            // remove the customer name from the description (if present)
+            descriptionselected = document.getElementById("description").value.replace(/\s*\[.+\]/g,"")
+            document.getElementById("description").value = descriptionselected
+            // find that text in the event array
+            for (const event of myTimeCalendar.getEvents()) {
+                console.log(event.extendedProps.description)
+                if (event.extendedProps.description == descriptionselected) {
+                    document.getElementById("customer").value = event.extendedProps.customer
+                    buildPrimaryCategories(event.extendedProps.primaryCategory)
+                    buildSecondaryCategories(event.extendedProps.primaryCategory, event.extendedProps.secondaryCategory)
+                    break;
+                }
+            }
+
+            
         }
 
         // function to get the event data from the database
@@ -229,6 +312,7 @@
             const data = new URLSearchParams();
             data.append("start", start);
             data.append("end", end);
+            data.append("limit", 60); //this is actual the minimum results returned
             try {
                 const responce = await fetch("/getEventDatafromDB?"+data.toString())
                 const events =  await responce.json()
@@ -237,17 +321,21 @@
                     events.forEach(event => {
                         myTimeCalendar.addEvent({
                             id: event.ID,
-                            title: event.Description + " (" + event.Customer + ")",
+                            title: event.Description + " [" + event.Customer + "]",
                             start: event.Start,
                             end: event.End,
                             borderColor: '#' + LightenDarkenColor(event.Colour, -30),
                             backgroundColor: "#" + event.Colour,
                             extendedProps: {
                                 primaryCategory: event.Primary_id,
-                                secondaryCategory: event.Secondary_id
+                                secondaryCategory: event.Secondary_id,
+                                customer: event.Customer,
+                                description: event.Description
                             }
-                        }
-                        )
+                        })
+                        // also populate the description and customer arrays
+                        descriptionArray.push(event.Description + " [" + event.Customer + "]")
+                        customerArray.push(event.Customer)
                     });
                 }
             } catch (error) {
@@ -286,6 +374,17 @@
                 }
                 var newDate = loop.setDate(loop.getDate() + 1);
                 loop = new Date(newDate);
+            }
+
+        }
+
+        async function getCustomers() {
+            const responce = await fetch("/getCustomersfromDB")
+            customerArrayData = await responce.json()
+            if (customerArrayData != null) {
+                for (const customer of customerArrayData) {
+                    customerArray.push(customer.Customername)
+                }
             }
         }
 
@@ -355,6 +454,7 @@
                     console.log(arg.start.toISOString()+ " to " + arg.end.toISOString())
                     // this should load the data from the database for the period
                     populateCalendar(arg.start.toISOString(), arg.end.toISOString())
+                    getCustomers()
                 },
                 editable: true,
             })
@@ -391,24 +491,16 @@
                             <input name="description" onchange="userChangedDesc();" list="descriptionOptions" class="form-control" id="description" type="text" placeholder="Description" />
                             <label for="description">Description</label>
                             <datalist id="descriptionOptions">
-                                <!-- Populate by Javascript -->
-                                <option value="San Francisco">
-                                <option value="New York">
-                                <option value="Seattle">
-                                <option value="Los Angeles">
-                                <option value="Chicago">
+                                <!-- Populated by Javascript -->
+                                <option value="Replace me">
                             </datalist>
                         </div>
                         <div class="form-floating mb-3">
                             <input name="customer" list="customerOptions" class="form-control" id="customer" type="text" placeholder="Customer" />
                             <label for="customer">Customer</label>
                             <datalist id="customerOptions">
-                                <!-- Populate by Javascript -->
-                                <option value="San Francisco">
-                                <option value="New York">
-                                <option value="Seattle">
-                                <option value="Los Angeles">
-                                <option value="Chicago">
+                                <!-- Populated by Javascript -->
+                                <option value="Replace me">
                             </datalist>
                         </div>
                         <div class="mb-3">

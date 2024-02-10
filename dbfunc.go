@@ -72,6 +72,39 @@ func Opendatabase(dbfile string) *sql.DB {
 }
 
 // --------------------------------------------------------------------
+func getCustomersJSON(db *sql.DB) (json_data string, err error) {
+
+	type customer struct {
+		ID           int64
+		Customername string
+	}
+
+	rows, err := db.Query("SELECT id, customername FROM customer ORDER BY customername")
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	var customers []customer
+	// loop thought the rows
+	for rows.Next() {
+		var c customer
+		err := rows.Scan(&c.ID, &c.Customername)
+		if err != nil {
+			log.Println("Scan of customers, ", err)
+		} else {
+			customers = append(customers, c)
+		}
+	}
+
+	b, err := json.Marshal(customers)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	return string(b), nil
+}
+
+// --------------------------------------------------------------------
 func getCategoriesJSON(db *sql.DB) (json_data string, err error) {
 
 	type secondary_category struct {
@@ -128,7 +161,7 @@ func getCategoriesJSON(db *sql.DB) (json_data string, err error) {
 }
 
 // --------------------------------------------------------------------
-func getEventsJSON(db *sql.DB, start string, end string) (json_data string, err error) {
+func getEventsJSON(db *sql.DB, start string, end string, maximumevents int) (json_data string, err error) {
 
 	type event struct {
 		ID           int64
@@ -140,7 +173,7 @@ func getEventsJSON(db *sql.DB, start string, end string) (json_data string, err 
 		Primary_id   int64
 		Secondary_id int64
 	}
-
+	// This query returns the date range, but also a total up to the maximum events
 	rows, err := db.Query(`SELECT
 			event.id,
 			event.description,
@@ -153,8 +186,23 @@ func getEventsJSON(db *sql.DB, start string, end string) (json_data string, err 
 		FROM event
 		JOIN customer on event.customer_id = customer.id
 		JOIN primary_category on event.primary_id=primary_category.id
-		WHERE start>=? AND end <=?`,
-		start, end)
+		WHERE start>=? AND end <=?
+		UNION
+		SELECT * FROM (SELECT
+			event.id,
+			event.description,
+			event.start,
+			event.end,
+			customer.customername,
+			primary_category.colour,
+			event.primary_id,
+			event.secondary_id
+		FROM event
+		JOIN customer on event.customer_id = customer.id
+		JOIN primary_category on event.primary_id=primary_category.id
+		ORDER BY event.id DESC
+		LIMIT ?)`,
+		start, end, maximumevents)
 	if err != nil {
 		return "", err
 	}
@@ -241,6 +289,17 @@ func putEventTimeChangetoDB(db *sql.DB, event eventData) (err error) {
 		event.start, event.end, event.id)
 	if err != nil {
 		log.Println("putEventTimeChangetoDB: Could not update event:", err)
+		return err
+	}
+	return nil
+}
+
+// --------------------------------------------------------------------
+func deleteEventData(db *sql.DB, event eventData) (err error) {
+	// need to update the times
+	_, err = db.Exec("DELETE FROM event WHERE id=?", event.id)
+	if err != nil {
+		log.Println("deleteEventData: Could not update event:", err)
 		return err
 	}
 	return nil

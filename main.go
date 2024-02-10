@@ -111,6 +111,40 @@ func updateEventDatatoDB(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func deleteEventDatafromDB(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("got /deleteEventDatafromDB request\n")
+	if r.Method == "POST" {
+		fmt.Println("Receive ajax post data string...")
+		err := r.ParseForm()
+		if err != nil {
+			log.Println("Form Parse Error:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("500 - Could not parse the form data!"))
+			return
+		}
+		event := eventData{}
+		id := r.Form.Get("id")
+		if id != "" {
+			event.id, err = strconv.ParseInt(id, 10, 64)
+			if err != nil {
+				log.Println("Could not parse ID:", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("500 - Could not parse ID"))
+				return
+			}
+		}
+
+		err = deleteEventData(db, event)
+		if err != nil {
+			log.Println("Could not write update to DB:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("500 - Could not write to database"))
+			return
+		}
+		w.Write([]byte(""))
+	}
+}
+
 func getEventDatafromDB(w http.ResponseWriter, r *http.Request) {
 	log.Printf("got /getEventDatafromDB request\n")
 	if r.Method == "GET" {
@@ -123,8 +157,13 @@ func getEventDatafromDB(w http.ResponseWriter, r *http.Request) {
 		}
 		start := r.Form.Get("start")
 		end := r.Form.Get("end")
+		limit := r.Form.Get("limit")
+		maximumreturnedresults := 1000
+		if limit != "" {
+			maximumreturnedresults, _ = strconv.Atoi(limit)
+		}
 
-		jstring, err := getEventsJSON(db, start, end)
+		jstring, err := getEventsJSON(db, start, end, maximumreturnedresults)
 		if err != nil {
 			fmt.Println("getEventDatafromDB: Returned JSON string: ", jstring, err)
 		}
@@ -134,9 +173,20 @@ func getEventDatafromDB(w http.ResponseWriter, r *http.Request) {
 }
 
 func getCategoriesfromDB(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("got /getCategoriesfromDB request\n")
+	log.Printf("got /getCategoriesfromDB request\n")
 	if r.Method == "GET" {
 		jstring, err := getCategoriesJSON(db)
+		if err != nil {
+			fmt.Println("Returned JSON string: ", jstring)
+		}
+		w.Write([]byte(jstring))
+	}
+}
+
+func getCustomersfromDB(w http.ResponseWriter, r *http.Request) {
+	log.Printf("got /getCustomersfromDB request\n")
+	if r.Method == "GET" {
+		jstring, err := getCustomersJSON(db)
 		if err != nil {
 			fmt.Println("Returned JSON string: ", jstring)
 		}
@@ -160,6 +210,8 @@ func main() {
 	http.HandleFunc("/getEventDatafromDB", getEventDatafromDB)
 	http.HandleFunc("/getCategoriesfromDB", getCategoriesfromDB)
 	http.HandleFunc("/helperfunctions.js", loadFile)
+	http.HandleFunc("/getCustomersfromDB", getCustomersfromDB)
+	http.HandleFunc("/deleteEventDatafromDB", deleteEventDatafromDB)
 
 	fmt.Println("Server starting on localhost:3333")
 	//openURL("http://localhost:3333")

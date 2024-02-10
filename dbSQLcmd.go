@@ -49,12 +49,12 @@ const get30Events string = `
 // --cerulean: #1c7293ff;
 // --powder-blue: #9eb3c2ff;
 var newDefaultCategories = [][]string{
-	{"Presales#21295cff", "RFP", "Solution Scope", "Sample Prints", "Sales Demo"},
-	{"Project#1b3b6fff", "Solution Design", "Meeting", "Training Material", "Pilot"},
-	{"Training#065a82ff", "Customer", "Sales", "Technical", "Videos"},
-	{"Postsales#2491bcff", "Meeting", "Technical Support", "Consultancy"},
-	{"Internal#1c7293ff", "Meeting", "PD", "Process Development", "Admin", "Showroom", "Sales Support"},
-	{"Leave#9eb3c2ff", "Annual Leave", "Sick Leave", "Birthday Leave", "Volunteer Day", "TIL"},
+	{"Presales#124e78", "RFP", "Solution Scope", "Sample Prints", "Sales Demo", "Misc"},
+	{"Project#f0f0c9", "Solution Design", "Meeting", "Training Material", "Pilot", "Misc", "Development"},
+	{"Training#f2bb05", "Customer", "Sales", "Technical Documentation", "Videos", "Misc"},
+	{"Postsales#d74e09", "Meeting", "Technical Support", "Consultancy", "Misc"},
+	{"Internal#6e0e0a", "Meeting", "Professional Development", "Process Development", "Admin", "Showroom", "Sales Support", "Technical Support", "Misc"},
+	{"Leave#cccccc", "Annual Leave", "Sick Leave", "Birthday Leave", "Volunteer Day", "TIL", "Public Holiday"},
 }
 
 type eventData struct {
