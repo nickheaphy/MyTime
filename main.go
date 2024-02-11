@@ -194,6 +194,27 @@ func getCustomersfromDB(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func reportPrimaryfromDB(w http.ResponseWriter, r *http.Request) {
+	log.Printf("got /reportPrimaryfromDB request\n")
+	if r.Method == "GET" {
+		err := r.ParseForm()
+		if err != nil {
+			log.Println("Form Parse Error:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("500 - Could not parse the form data!"))
+			return
+		}
+		start := r.Form.Get("start")
+		end := r.Form.Get("end")
+
+		jstring, err := reportPrimaryJSON(db, start, end)
+		if err != nil {
+			fmt.Println("getEventDatafromDB: Returned JSON string: ", jstring, err)
+		}
+		w.Write([]byte(jstring))
+	}
+}
+
 func loadFile(w http.ResponseWriter, r *http.Request) {
 	p := "." + r.URL.Path
 	http.ServeFile(w, r, p)
@@ -210,8 +231,10 @@ func main() {
 	http.HandleFunc("/getEventDatafromDB", getEventDatafromDB)
 	http.HandleFunc("/getCategoriesfromDB", getCategoriesfromDB)
 	http.HandleFunc("/helperfunctions.js", loadFile)
+	http.HandleFunc("/report.html", loadFile)
 	http.HandleFunc("/getCustomersfromDB", getCustomersfromDB)
 	http.HandleFunc("/deleteEventDatafromDB", deleteEventDatafromDB)
+	http.HandleFunc("/reportPrimaryfromDB", reportPrimaryfromDB)
 
 	fmt.Println("Server starting on localhost:3333")
 	//openURL("http://localhost:3333")

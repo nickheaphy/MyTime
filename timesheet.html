@@ -396,6 +396,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const calendarEl = document.getElementById('calendar')
             myTimeCalendar = new FullCalendar.Calendar(calendarEl, {
+                locale: 'en-gb',
                 firstDay: 1,
                 initialView: 'timeGridWeek',
                 headerToolbar: {
@@ -416,7 +417,8 @@
                     report: {
                         text: 'Report',
                         click: function() {
-                            alert('clicked the report button!');
+                            // open the report page with the date range
+                            window.location.href = "report.html?start=" + myTimeCalendar.view.activeStart.toISOString() + "&end=" + myTimeCalendar.view.activeEnd.toISOString()
                         }
                     }
                 },

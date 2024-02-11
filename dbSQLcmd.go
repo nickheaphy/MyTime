@@ -41,7 +41,32 @@ const getCustomers string = `
 
 const get30Events string = `
 	SELECT * FROM event ORDER BY end LIMIT 30
-`
+	`
+
+const getPrimarySummarySQL string = `
+	SELECT
+	SUM(round((JULIANDAY(event.end)-JULIANDAY(event.start)) *24 * 60)) as duration,
+	primary_category.name as primaryname,
+	primary_category.colour as colour
+	FROM event
+	JOIN customer on event.customer_id = customer.id
+	JOIN primary_category on event.primary_id=primary_category.id
+	JOIN secondary_category on event.secondary_id = secondary_category.id
+	WHERE event.start>=? AND event.end<? AND primary_category.name != 'Leave'
+	GROUP BY primaryname, colour
+	`
+const getPrimarySecondarySummarySQL string = `
+	SELECT
+	SUM(round((JULIANDAY(event.end)-JULIANDAY(event.start)) *24 * 60)) as duration
+	,primary_category.name as primaryname
+	,secondary_category.name as secondaryname
+	FROM event
+	JOIN customer on event.customer_id = customer.id
+	JOIN primary_category on event.primary_id=primary_category.id
+	JOIN secondary_category on event.secondary_id = secondary_category.id
+	WHERE event.start>=? AND event.end<?
+	GROUP BY primaryname,secondaryname
+	`
 
 // --space-cadet: #21295cff;
 // --yale-blue: #1b3b6fff;
@@ -56,6 +81,9 @@ var newDefaultCategories = [][]string{
 	{"Internal#6e0e0a", "Meeting", "Professional Development", "Process Development", "Admin", "Showroom", "Sales Support", "Technical Support", "Misc"},
 	{"Leave#cccccc", "Annual Leave", "Sick Leave", "Birthday Leave", "Volunteer Day", "TIL", "Public Holiday"},
 }
+
+// 124e78, f0f0c9, f2bb05, d74e09, 6e0e0a
+// #331832, #694d75, #1b5299, #9fc2cc, #f1ecce
 
 type eventData struct {
 	id               int64
