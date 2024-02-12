@@ -22,9 +22,10 @@
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js'></script>
     <script src='helperfunctions.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
         
 </head>
-    <body onload="getPrimaryData()"></body>>
+    <body onload="getPrimaryData()"></body>
         <div id='reportholder'>
             <canvas id="myChart" width="400" height="400"></canvas>
         </div>
@@ -32,12 +33,14 @@
             donutdata = []
             donutlabels = []
             donutcolours = []
+            donutvalues = []
             async function getPrimaryData() {
                 const data = new URLSearchParams(window.location.search);
                 try {
                     const responce = await fetch("/reportPrimaryfromDB?"+data.toString())
                     donutdata = await responce.json()
                     for (i=0; i< donutdata.length; i++) {
+                        donutvalues.push(donutdata[i].Duration)
                         donutlabels.push(donutdata[i].Primaryname)
                         donutcolours.push("#" + donutdata[i].Colour)
                     }
@@ -51,19 +54,35 @@
                 const ctx = document.getElementById('myChart');
             
                 new Chart(ctx, {
+                    plugins: [ChartDataLabels],
                     type: 'doughnut',
                     data: {
                         labels: donutlabels,
                         datasets: [{
-                            data: donutdata,
+                            data: donutvalues,
                             backgroundColor: donutcolours
                         }]
                     },
                     options: {
                         parsing: {
                             key: 'Duration'
+                        },
+                        plugins: {
+                            datalabels: {
+                                labels: {
+                                    title: {
+                                        color: 'white',
+                                        font: {
+                                            weight: 'bold'
+                                        }
+                                    }
+                                },
+                                formatter: function(value, context) {
+                                    return context.chart.data.labels[context.dataIndex];
+                                }
+                            }
+                        }
                     }
-                }
                 });
             }
         </script>
