@@ -43,9 +43,12 @@
             var cust = document.getElementById("customerOptions")
             cust.replaceChildren();
             for (i=0; i< customerArray.length; i++) {
-                var option = document.createElement('option');
-                option.value = customerArray[i];
-                cust.appendChild(option);
+                // remove if the project is closed (contains a ! at end)
+                if (customerArray[i].indexOf("!)") == -1) {
+                    var option = document.createElement('option');
+                    option.value = customerArray[i];
+                    cust.appendChild(option);
+                }
             }
         }
 
@@ -158,7 +161,7 @@
                         primaryCategory: formdata.primaryLogType,
                         secondaryCategory: formdata.secondaryLogType,
                         customer: formdata.customer,
-                        description: formdata.description
+                        description: formdata.description,
                     }
                 })
                 // also need to write to the description array
@@ -287,14 +290,17 @@
         // function to handle user changing the description
         function userChangedDesc() {
             // need to update the form fields to the ones previously used for that description
-            console.log("Need to update screen")
+            //console.log("Need to update screen")
             // remove the customer name from the description (if present)
-            descriptionselected = document.getElementById("description").value.replace(/\s*\[.+\]/g,"")
-            document.getElementById("description").value = descriptionselected
+            descriptionselected = document.getElementById("description").value.trim()
+            descriptionselectedcleaned = descriptionselected.replace(/\s*\[.+\]/g,"").trim()
+            document.getElementById("description").value = descriptionselectedcleaned
             // find that text in the event array
-            for (const event of myTimeCalendar.getEvents()) {
-                console.log(event.extendedProps.description)
-                if (event.extendedProps.description == descriptionselected) {
+            const allevents = myTimeCalendar.getEvents()
+            for (const event of allevents) {
+                const descriptionandcustomer = event.extendedProps.description + " [" + event.extendedProps.customer + "]"
+                //console.log(descriptionandcustomer + " ... " + descriptionselected)
+                if (descriptionandcustomer == descriptionselected) {
                     document.getElementById("customer").value = event.extendedProps.customer
                     buildPrimaryCategories(event.extendedProps.primaryCategory)
                     buildSecondaryCategories(event.extendedProps.primaryCategory, event.extendedProps.secondaryCategory)

@@ -60,12 +60,13 @@ const getPrimarySecondarySummarySQL string = `
 	SUM(round((JULIANDAY(event.end)-JULIANDAY(event.start)) *24 * 60)) as duration
 	,primary_category.name as primaryname
 	,secondary_category.name as secondaryname
+	,primary_category.colour as colour
 	FROM event
 	JOIN customer on event.customer_id = customer.id
 	JOIN primary_category on event.primary_id=primary_category.id
 	JOIN secondary_category on event.secondary_id = secondary_category.id
 	WHERE event.start>=? AND event.end<?
-	GROUP BY primaryname,secondaryname
+	GROUP BY primaryname,secondaryname,colour
 	`
 
 // --space-cadet: #21295cff;

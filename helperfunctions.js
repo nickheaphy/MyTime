@@ -26,3 +26,11 @@ function sort_unique(arr) {
     }
     return ret;
 }
+
+// https://domhabersack.com/snippets/array-numbers-to-fractions
+function toRelative(numbers) {
+  const largestNumber = Math.max(...numbers)
+  return numbers.map(number => number / largestNumber)
+}
+
+console.log("helperfunction Imported")

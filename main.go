@@ -217,6 +217,7 @@ func reportPrimaryfromDB(w http.ResponseWriter, r *http.Request) {
 
 func loadFile(w http.ResponseWriter, r *http.Request) {
 	p := "." + r.URL.Path
+	log.Println("serving ", p)
 	http.ServeFile(w, r, p)
 }
 
@@ -237,7 +238,7 @@ func main() {
 	http.HandleFunc("/reportPrimaryfromDB", reportPrimaryfromDB)
 
 	fmt.Println("Server starting on localhost:3333")
-	//openURL("http://localhost:3333")
+	openURL("http://localhost:3333")
 	err := http.ListenAndServe(":3333", nil)
 	if errors.Is(err, http.ErrServerClosed) {
 		fmt.Printf("server closed\n")

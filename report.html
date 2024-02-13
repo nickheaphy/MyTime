@@ -30,20 +30,42 @@
             <canvas id="myChart" width="400" height="400"></canvas>
         </div>
         <script>
-            donutdata = []
-            donutlabels = []
-            donutcolours = []
-            donutvalues = []
+            function toRelative(numbers) {
+                //const largestNumber = Math.max(...numbers)
+                const total = numbers.reduce((a,b)=>a+b)
+                return numbers.map(number => (number / total)*100)
+            }
+
+            donutprimarynames = []
+            donutprimarycolours = []
+            donutprimaryvalues = []
+            donutsecondarynames = []
+            donutsecondarycolours = []
+            donutsecondaryvalues = []
             async function getPrimaryData() {
                 const data = new URLSearchParams(window.location.search);
                 try {
                     const responce = await fetch("/reportPrimaryfromDB?"+data.toString())
                     donutdata = await responce.json()
+                    let currentprimary = ""
                     for (i=0; i< donutdata.length; i++) {
-                        donutvalues.push(donutdata[i].Duration)
-                        donutlabels.push(donutdata[i].Primaryname)
-                        donutcolours.push("#" + donutdata[i].Colour)
+                        // there must be a better way to do this....
+                        if (donutdata[i].Primaryname.toString() != currentprimary.toString()) {
+                            // new primary category
+                            console.log(donutdata[i].Primaryname.toString() + " >>> " + currentprimary +".")
+                            currentprimary = donutdata[i].Primaryname.toString()
+                            donutprimarynames.push(currentprimary)
+                            donutprimarycolours.push("#" + donutdata[i].Colour)
+                            donutprimaryvalues.push(donutdata[i].Duration)
+                        } else {
+                            donutprimaryvalues[donutprimaryvalues.length - 1] += donutdata[i].Duration
+                        }
+                        donutsecondarynames.push(donutdata[i].Secondaryname)
+                        donutsecondarycolours.push("#" + donutdata[i].Colour)
+                        donutsecondaryvalues.push(donutdata[i].Duration)
                     }
+                    // need to convert to a percentage
+                    //donutvalues = toRelative(donutvalues)
                     drawdonut()
                 } catch (error) {
                     console.log(error)
@@ -57,16 +79,20 @@
                     plugins: [ChartDataLabels],
                     type: 'doughnut',
                     data: {
-                        labels: donutlabels,
+                        //labels: [donutsecondarynames, {donutprimarynames}],
                         datasets: [{
-                            data: donutvalues,
-                            backgroundColor: donutcolours
-                        }]
+                            data: donutsecondaryvalues,
+                            backgroundColor: donutsecondarycolours,
+                            labels: donutsecondarynames
+                        },
+                        {
+                            data: donutprimaryvalues,
+                            backgroundColor: donutprimarycolours,
+                            labels: donutprimarynames
+                        }
+                    ]
                     },
                     options: {
-                        parsing: {
-                            key: 'Duration'
-                        },
                         plugins: {
                             datalabels: {
                                 labels: {
@@ -78,8 +104,15 @@
                                     }
                                 },
                                 formatter: function(value, context) {
-                                    return context.chart.data.labels[context.dataIndex];
+                                    //console.log(value)
+                                    console.log(context)
+                                    return context.dataset.labels[context.dataIndex];
                                 }
+                                // label: function(tooltipItem, data) {
+                                // var dataset = data.datasets[tooltipItem.datasetIndex];
+                                // var index = tooltipItem.index;
+                                // return dataset.labels[index] + ': ' + dataset.data[index];
+                
                             }
                         }
                     }

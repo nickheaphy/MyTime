@@ -309,12 +309,13 @@ func deleteEventData(db *sql.DB, event eventData) (err error) {
 func reportPrimaryJSON(db *sql.DB, start string, end string) (json_data string, err error) {
 
 	type report struct {
-		Duration    int64
-		Primaryname string
-		Colour      string
+		Duration      int64
+		Primaryname   string
+		Secondaryname string
+		Colour        string
 	}
 	// This query returns the date range, but also a total up to the maximum events
-	rows, err := db.Query(getPrimarySummarySQL, start, end)
+	rows, err := db.Query(getPrimarySecondarySummarySQL, start, end)
 	if err != nil {
 		log.Println("reportPrimaryJSON: SQL query fail")
 		return "", err
@@ -325,7 +326,7 @@ func reportPrimaryJSON(db *sql.DB, start string, end string) (json_data string, 
 	// loop thought the rows
 	for rows.Next() {
 		var d report
-		err := rows.Scan(&d.Duration, &d.Primaryname, &d.Colour)
+		err := rows.Scan(&d.Duration, &d.Primaryname, &d.Secondaryname, &d.Colour)
 		if err != nil {
 			log.Println("Scan of event, ", err)
 		} else {
