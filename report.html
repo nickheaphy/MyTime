@@ -8,6 +8,7 @@
         }
 
         #reportholder {
+            width: 800px;
             background-color: white;
             margin: 40px;
             padding: 15px;
@@ -26,6 +27,9 @@
         
 </head>
     <body onload="getPrimaryData()"></body>
+        <div id="timescale">
+            &nbsp;
+        </div>
         <div id='reportholder'>
             <canvas id="myChart" width="400" height="400"></canvas>
         </div>
@@ -44,6 +48,7 @@
             donutsecondaryvalues = []
             async function getPrimaryData() {
                 const data = new URLSearchParams(window.location.search);
+                document.getElementById("timescale").innerHTML = Date.parse(data.get('start')).toLocaleString('en-GB', { timeZone: 'UTC' })
                 try {
                     const responce = await fetch("/reportPrimaryfromDB?"+data.toString())
                     donutdata = await responce.json()
@@ -65,7 +70,8 @@
                         donutsecondaryvalues.push(donutdata[i].Duration)
                     }
                     // need to convert to a percentage
-                    //donutvalues = toRelative(donutvalues)
+                    donutprimaryvalues = toRelative(donutprimaryvalues)
+                    donutsecondaryvalues = toRelative(donutsecondaryvalues)
                     drawdonut()
                 } catch (error) {
                     console.log(error)
