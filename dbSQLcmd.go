@@ -65,7 +65,7 @@ const getPrimarySecondarySummarySQL string = `
 	JOIN customer on event.customer_id = customer.id
 	JOIN primary_category on event.primary_id=primary_category.id
 	JOIN secondary_category on event.secondary_id = secondary_category.id
-	WHERE event.start>=? AND event.end<?
+	WHERE event.start>=? AND event.end<? AND primary_category.name != 'Leave'
 	GROUP BY primaryname,secondaryname,colour
 	`
 
