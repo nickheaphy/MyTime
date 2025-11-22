@@ -1,12 +1,12 @@
 # MyTime
 
-For many years I have noted down what I do (work related) on a calendar that I print out every week. This was really for my own informaiton, so I could actually remember what I did - it was especially useful at review time to be able to say what I do.
+For many years I have noted down what I do (work related) on a calendar that I print out every week. This was really for my own information, so I could actually remember what I did - it was especially useful at review time to be able to say what I do.
 
-A few years ago work wanted to see where our time was spent and had us enter our time into ServiceDesk, then this changed to entering time in cases in Salesforce. Neither of these systems were great at being able to quickly translate my written calendar into logs. I did write some tools to make this easier (XXXXXXX) but it still didn't really work the way I wanted to work.
+A few years ago work wanted to see where our time was spent and had us enter our time into ServiceDesk, then this changed to entering time in cases in Salesforce. Neither of these systems were great at being able to quickly translate my written calendar into logs. I did write some [tools](https://bitbucket.org/nickheaphy/salesforce-case-time-logging/src/master/) to make this easier but it still didn't really work the way I wanted to work.
 
 Late last year it was decided that we didn't need to track our time using any of the electronic systems. Problem was, I quite liked the reporting that could be pulled from having all my time logs in a database.
 
-I looked at some existing tools, but nothing appealed. The all looked like logging time would become a chore.
+I looked at some existing tools, but nothing appealed. They all looked like logging time would become a chore.
 
 So I decided to hack together something basic, that worked the same way as my paper system, that was quick to translate the paper entries to digital at the end of the week.
 
@@ -28,9 +28,15 @@ As I end up working on the same thing over multiple days, I wanted to be able to
 
 I wanted some sort of colour coding (which is still a bit of a work in progress) so I could see different work types.
 
+![Calendar Display](img/fulldisplay.png)
+
 I needed some way to generate some reports, with selectable time frames.
 
+![Basic Report](img/report.png "Basic Report Sample")
+
 I wanted the log classifications to be constrained, and ideally with only a few different options (this goal may not have been met...)
+
+![Edit Event Properties](img/editevent.png "Edit Event Properties")
 
 ## Installation (Mac)
 
@@ -55,8 +61,7 @@ This is really quite an ugly hack. It only does very minimal data validation, it
 ## Todo
 
 - Update the default colour scheme
+- Better reporting
 
-https://earthly.dev/blog/golang-sqlite/
-https://www.w3schools.com/xml/ajax_xmlhttprequest_send.asp
-https://forum.golangbridge.org/t/using-golang-to-make-a-string-and-uses-ajax/22652/2
-https://medium.com/@edwardpie/processing-form-request-data-in-golang-2dff4c2441be
+
+
