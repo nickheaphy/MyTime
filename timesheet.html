@@ -296,6 +296,8 @@
             descriptionselectedcleaned = descriptionselected.replace(/\s*\[.+\]/g,"").trim()
             document.getElementById("description").value = descriptionselectedcleaned
             // find that text in the event array
+            // TODO - this should be rewritten to pull this from the database via AJAX call as the calendar
+            // events does not contain all events (currently limited by populateCalendar limit variable )
             const allevents = myTimeCalendar.getEvents()
             for (const event of allevents) {
                 const descriptionandcustomer = event.extendedProps.description + " [" + event.extendedProps.customer + "]"
@@ -318,7 +320,7 @@
             const data = new URLSearchParams();
             data.append("start", start);
             data.append("end", end);
-            data.append("limit", 60); //this is actual the minimum results returned
+            data.append("limit", 500); //this is actual the minimum results returned
             try {
                 const responce = await fetch("/getEventDatafromDB?"+data.toString())
                 const events =  await responce.json()
@@ -381,6 +383,7 @@
                 var newDate = loop.setDate(loop.getDate() + 1);
                 loop = new Date(newDate);
             }
+                
 
         }
 
@@ -391,6 +394,99 @@
                 for (const customer of customerArrayData) {
                     customerArray.push(customer.Customername)
                 }
+            }
+        }
+
+        function renderDayHeaderContent(arg, calendar) {
+            // 1. Get the date of the header
+            const headerDate = arg.date;
+
+            // 2. Filter events for this specific day
+            const events = calendar.getEvents().filter(event => {
+                // FullCalendar stores dates as Date objects or strings,
+                // so we need to compare the day part only.
+                if (!event.start) return false;
+
+                // Use a utility to format dates for comparison (YYYY-MM-DD)
+                const eventStartDateString = calendar.formatDate(event.start, { year: 'numeric', month: '2-digit', day: '2-digit' });
+                const headerDateString = calendar.formatDate(headerDate, { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+                // Include the event if it falls on the header's date AND it's a timed event
+                // All-day events (event.allDay === true) don't have a time duration by default.
+                return eventStartDateString === headerDateString && !event.allDay;
+            });
+
+            // 3. Calculate total duration
+            let totalMinutes = 0;
+            events.forEach(event => {
+                // Ensure both start and end exist for a duration calculation
+                if (event.start && event.end && event.display != 'background') {
+                const startMs = event.start.getTime();
+                const endMs = event.end.getTime();
+                const durationMs = endMs - startMs;
+                totalMinutes += durationMs / (1000 * 60); // Convert milliseconds to minutes
+                }
+            });
+
+            // 4. Format the total hours
+            const totalHours = (totalMinutes / 60).toFixed(2); // two decimal place
+
+            // 5. Construct the final HTML/DOM for the header content
+            const originalContent = arg.text; // e.g., "Mon 11/24"
+            const hoursDisplay = `<div class="day-total-hours"><small>${totalHours} hrs</small></div>`;
+
+            const container = document.createElement('div');
+            container.className = 'day-header-container';
+            container.innerHTML = `<div>${originalContent}</div>${hoursDisplay}`;
+
+            return { domNodes: [container] };
+        }
+
+        // This function needs access to the calendar instance
+        function calculateViewTotalHours(calendar) {
+            // Get the current view's start and end dates (excluding time)
+            const viewStart = calendar.view.activeStart;
+            const viewEnd = calendar.view.activeEnd;
+
+            let totalMinutes = 0;
+
+            calendar.getEvents().forEach(event => {
+                // 1. Skip all-day events
+                if (event.allDay || !event.start || !event.end || event.display == 'background') return;
+
+                // 2. Check for event overlap within the current view range
+                // An event is visible if its start is before the view end AND its end is after the view start.
+                const eventStartsBeforeViewEnds = event.start.getTime() < viewEnd.getTime();
+                const eventEndsAfterViewStarts = event.end.getTime() > viewStart.getTime();
+
+                if (eventStartsBeforeViewEnds && eventEndsAfterViewStarts) {
+                // 3. Determine the actual start and end times that fall within the view
+                const periodStart = Math.max(event.start.getTime(), viewStart.getTime());
+                const periodEnd = Math.min(event.end.getTime(), viewEnd.getTime());
+
+                // 4. Calculate duration for the visible portion
+                const durationMs = periodEnd - periodStart;
+                totalMinutes += durationMs / (1000 * 60); // Convert milliseconds to minutes
+                }
+            });
+
+            // 5. Format the total hours (e.g., 35.5 hrs)
+            const totalHours = (totalMinutes / 60).toFixed(1);
+
+            return totalHours;
+        }
+
+        function updateHoursButton(cal) {
+            if (!cal) return;
+            const totalHours = calculateViewTotalHours(cal);
+    
+            // Find the custom button by its class name (which FullCalendar assigns)
+            // and update its text content.
+            const button = document.querySelector('.fc-totalHours-button');
+            if (button) {
+                button.textContent = `Total: ${totalHours} hrs`;
+                // You might also want to update the button's title/aria-label for accessibility
+                button.setAttribute('aria-label', `Total ${totalHours} hours displayed`);
             }
         }
 
@@ -408,7 +504,7 @@
                 headerToolbar: {
                     left: 'prev,next,today',
                     center: 'title',
-                    right: 'report timeGridWeek,sevenDay' // user can switch between the two
+                    right: 'totalHours report timeGridWeek,sevenDay' // user can switch between the two
                 },
                 views: {
                     sevenDay: {
@@ -426,6 +522,9 @@
                             // open the report page with the date range
                             window.location.href = "report.html?start=" + myTimeCalendar.view.activeStart.toISOString() + "&end=" + myTimeCalendar.view.activeEnd.toISOString()
                         }
+                    },
+                    totalHours: {
+                        text: 'Calculating...'
                     }
                 },
                 slotDuration: '00:15',
@@ -463,11 +562,15 @@
                     // this should load the data from the database for the period
                     populateCalendar(arg.start.toISOString(), arg.end.toISOString())
                     getCustomers()
+                    updateHoursButton(myTimeCalendar);
                 },
+                dayHeaderContent: (arg) => renderDayHeaderContent(arg, myTimeCalendar),
                 editable: true,
+                
             })
 
             myTimeCalendar.render()
+            updateHoursButton(myTimeCalendar);
         })
 
     </script>
@@ -496,7 +599,7 @@
                         <input name="eventid" id="eventid" type="hidden" value="0"/>
                         
                         <div class="form-floating mb-3">
-                            <input name="description" onchange="userChangedDesc();" list="descriptionOptions" class="form-control" id="description" type="text" placeholder="Description" />
+                            <input name="description" onchange="userChangedDesc();" list="descriptionOptions" class="form-control" id="description" type="text" placeholder="Description" spellcheck="true"/>
                             <label for="description">Description</label>
                             <datalist id="descriptionOptions">
                                 <!-- Populated by Javascript -->
