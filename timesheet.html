@@ -334,6 +334,7 @@
                             end: event.End,
                             borderColor: '#' + LightenDarkenColor(event.Colour, -30),
                             backgroundColor: "#" + event.Colour,
+                            display: 'block',
                             extendedProps: {
                                 primaryCategory: event.Primary_id,
                                 secondaryCategory: event.Secondary_id,
@@ -421,10 +422,10 @@
             events.forEach(event => {
                 // Ensure both start and end exist for a duration calculation
                 if (event.start && event.end && event.display != 'background') {
-                const startMs = event.start.getTime();
-                const endMs = event.end.getTime();
-                const durationMs = endMs - startMs;
-                totalMinutes += durationMs / (1000 * 60); // Convert milliseconds to minutes
+                    const startMs = event.start.getTime();
+                    const endMs = event.end.getTime();
+                    const durationMs = endMs - startMs;
+                    totalMinutes += durationMs / (1000 * 60); // Convert milliseconds to minutes
                 }
             });
 
@@ -448,30 +449,49 @@
             const viewStart = calendar.view.activeStart;
             const viewEnd = calendar.view.activeEnd;
 
+            console.log("View Start: " + viewStart.toISOString() + ", View End: " + viewEnd.toISOString());
+
+            // //convert to Monday start and Sunday end
+            // function findMonday(unixTimeStamp) {
+            //     let startDate = new Date(unixTimeStamp * 1000);
+            //     let startDay = startDate.getUTCDay();
+            //     let diff = startDate.getUTCDate() - startDay + (startDay === 0 ? -6 : 1);
+            //     let monday = new Date(startDate.setUTCDate(diff));
+            //     monday.setUTCHours(0, 0, 0, 0);
+            //     monday = new Date(monday).valueOf();
+            //     return monday;
+            // }
+
+            //const adjustedViewStart = new Date(findMonday(Math.floor(viewEnd.getTime() / 1000)));
+            const adjustedViewEnd = new Date(viewStart);
+            adjustedViewEnd.setDate(adjustedViewEnd.getDate() + 7); //offset by 7 days
+
+            console.log("Calculating total hours from " + viewStart.toISOString() + " to " + adjustedViewEnd.toISOString());
             let totalMinutes = 0;
 
             calendar.getEvents().forEach(event => {
-                // 1. Skip all-day events
+                // 1. Skip all-day events and background events
                 if (event.allDay || !event.start || !event.end || event.display == 'background') return;
 
                 // 2. Check for event overlap within the current view range
                 // An event is visible if its start is before the view end AND its end is after the view start.
-                const eventStartsBeforeViewEnds = event.start.getTime() < viewEnd.getTime();
+                const eventStartsBeforeViewEnds = event.start.getTime() < adjustedViewEnd.getTime();
                 const eventEndsAfterViewStarts = event.end.getTime() > viewStart.getTime();
 
                 if (eventStartsBeforeViewEnds && eventEndsAfterViewStarts) {
-                // 3. Determine the actual start and end times that fall within the view
-                const periodStart = Math.max(event.start.getTime(), viewStart.getTime());
-                const periodEnd = Math.min(event.end.getTime(), viewEnd.getTime());
+                    // 3. Determine the actual start and end times that fall within the view
+                    const periodStart = Math.max(event.start.getTime(), viewStart.getTime());
+                    const periodEnd = Math.min(event.end.getTime(), adjustedViewEnd.getTime());
 
-                // 4. Calculate duration for the visible portion
-                const durationMs = periodEnd - periodStart;
-                totalMinutes += durationMs / (1000 * 60); // Convert milliseconds to minutes
+                    // 4. Calculate duration for the visible portion
+                    const durationMs = periodEnd - periodStart;
+                    totalMinutes += durationMs / (1000 * 60); // Convert milliseconds to minutes
+                    console.log(`Event ID: ${event.title}, Duration within view: ${durationMs / (1000 * 60)} minutes`);
                 }
             });
 
-            // 5. Format the total hours (e.g., 35.5 hrs)
-            const totalHours = (totalMinutes / 60).toFixed(1);
+            // 5. Format the total hours (e.g., 35.50 hrs)
+            const totalHours = (totalMinutes / 60).toFixed(2);
 
             return totalHours;
         }
@@ -485,8 +505,6 @@
             const button = document.querySelector('.fc-totalHours-button');
             if (button) {
                 button.textContent = `Total: ${totalHours} hrs`;
-                // You might also want to update the button's title/aria-label for accessibility
-                button.setAttribute('aria-label', `Total ${totalHours} hours displayed`);
             }
         }
 
@@ -524,7 +542,10 @@
                         }
                     },
                     totalHours: {
-                        text: 'Calculating...'
+                        text: 'Calculating...',
+                        click: function() {
+                            updateHoursButton(myTimeCalendar);
+                        }
                     }
                 },
                 slotDuration: '00:15',
